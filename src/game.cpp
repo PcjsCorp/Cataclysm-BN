@@ -846,6 +846,17 @@ void game::load_map( const point_abs_sm &pos_sm, const bool pump_events )
     submap_loader.add_listener( this );
     submap_loader.add_listener( &m );
 
+    // m.load() above cleared map::funnel_locations_ and the map listener was
+    // only just registered, so the submaps loaded by m.load() never fired
+    // on_submap_loaded() for it.  Replay on_submap_loaded() for every
+    // currently-resident submap so funnel traps (e.g. gutter downspouts) are
+    // registered and fill_water_collectors() can find them (#10171).
+    for( auto &[raw_pos, sm_ptr] : MAPBUFFER_REGISTRY.get( new_dim_id ) ) {
+        if( sm_ptr ) {
+            m.on_submap_loaded( tripoint_abs_sm( raw_pos ), new_dim_id );
+        }
+    }
+
     const auto bubble_begin = pos_sm;
     const auto bubble_end = bubble_begin + point_rel_sm( g_mapsize, g_mapsize );
 
